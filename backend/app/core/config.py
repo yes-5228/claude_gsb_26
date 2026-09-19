@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     # 启动时是否写入演示数据
     seed_on_startup: bool = True
 
+    # 异步导出文件的存放目录（临时文件与成品同目录，保证原子改名）
+    export_dir: str = "./data/exports"
+
     # 分页参数上限
     max_page_size: int = 100
 

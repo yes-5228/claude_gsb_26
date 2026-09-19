@@ -1,6 +1,7 @@
 """测试夹具：使用独立的 SQLite 文件，避免污染开发数据。"""
 
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -8,12 +9,16 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND_DIR))
 
 TEST_DB = BACKEND_DIR / "data" / "test_app.db"
+TEST_EXPORT_DIR = BACKEND_DIR / "data" / "test_exports"
 os.environ["DATABASE_URL"] = f"sqlite:///{TEST_DB.as_posix()}"
+os.environ["EXPORT_DIR"] = TEST_EXPORT_DIR.as_posix()
 os.environ["SEED_ON_STARTUP"] = "false"
 os.environ["CORS_ORIGINS"] = "*"
 
 if TEST_DB.exists():
     TEST_DB.unlink()
+if TEST_EXPORT_DIR.exists():
+    shutil.rmtree(TEST_EXPORT_DIR)
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

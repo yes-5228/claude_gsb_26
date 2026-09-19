@@ -64,8 +64,7 @@ def is_overdue(issue: Issue) -> bool:
     )
 
 
-def list_issues(
-    db: Session,
+def build_issue_stmt(
     *,
     restroom_id: int | None = None,
     inspection_id: int | None = None,
@@ -78,11 +77,8 @@ def list_issues(
     overdue: bool | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
-    page: int = 1,
-    page_size: int = 10,
-    sort_by: str = "report_time",
-    order: str = "desc",
-) -> tuple[list[Issue], int]:
+):
+    """按筛选条件构造问题查询（不含排序与分页），列表与导出共用，保证口径一致。"""
     stmt = select(Issue)
     if district:
         stmt = stmt.join(Restroom, Restroom.id == Issue.restroom_id).where(
@@ -126,6 +122,41 @@ def list_issues(
                 Issue.reporter.like(like),
             )
         )
+    return stmt
+
+
+def list_issues(
+    db: Session,
+    *,
+    restroom_id: int | None = None,
+    inspection_id: int | None = None,
+    district: str | None = None,
+    status: str | None = None,
+    statuses: list[str] | None = None,
+    category: str | None = None,
+    severity: str | None = None,
+    keyword: str | None = None,
+    overdue: bool | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    page: int = 1,
+    page_size: int = 10,
+    sort_by: str = "report_time",
+    order: str = "desc",
+) -> tuple[list[Issue], int]:
+    stmt = build_issue_stmt(
+        restroom_id=restroom_id,
+        inspection_id=inspection_id,
+        district=district,
+        status=status,
+        statuses=statuses,
+        category=category,
+        severity=severity,
+        keyword=keyword,
+        overdue=overdue,
+        date_from=date_from,
+        date_to=date_to,
+    )
 
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     column = SORTABLE_FIELDS.get(sort_by, Issue.report_time)

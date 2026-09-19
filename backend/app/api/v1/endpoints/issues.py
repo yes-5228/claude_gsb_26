@@ -4,15 +4,23 @@ from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api.deps import PaginationDep, build_meta
 from app.core.constants import OPEN_ISSUE_STATUSES
 from app.core.database import get_db
+from app.schemas.batch import (
+    BatchCloseIn,
+    BatchDispatchIn,
+    BatchResultOut,
+    ExportJobOut,
+    IssueExportIn,
+)
 from app.schemas.common import MessageOut, Page
 from app.schemas.issue import IssueCreate, IssueOut, IssueStatusUpdate, IssueUpdate
-from app.services import issue_service
+from app.services import batch_service, export_service, issue_service
 
 router = APIRouter(prefix="/issues", tags=["问题上报"])
 
@@ -74,6 +82,42 @@ def list_issues(
 @router.post("", response_model=IssueOut, status_code=201, summary="上报问题")
 def create_issue(payload: IssueCreate, db: Annotated[Session, Depends(get_db)]) -> IssueOut:
     return issue_service.to_out(issue_service.create_issue(db, payload))
+
+
+# 批量与导出路由必须注册在 /{issue_id} 之前，避免被路径参数抢占
+@router.post("/batch-dispatch", response_model=BatchResultOut, summary="批量派单")
+def batch_dispatch_issues(
+    payload: BatchDispatchIn, db: Annotated[Session, Depends(get_db)]
+) -> BatchResultOut:
+    operation, replayed = batch_service.batch_dispatch(db, payload)
+    return batch_service.to_out(operation, replayed=replayed)
+
+
+@router.post("/batch-close", response_model=BatchResultOut, summary="批量关闭（统一理由必填）")
+def batch_close_issues(
+    payload: BatchCloseIn, db: Annotated[Session, Depends(get_db)]
+) -> BatchResultOut:
+    operation, replayed = batch_service.batch_close(db, payload)
+    return batch_service.to_out(operation, replayed=replayed)
+
+
+@router.post("/exports", response_model=ExportJobOut, status_code=201, summary="创建异步导出任务")
+def create_issue_export(
+    payload: IssueExportIn, db: Annotated[Session, Depends(get_db)]
+) -> ExportJobOut:
+    job = export_service.create_export_job(db, payload)
+    return export_service.to_job_out(job)
+
+
+@router.get("/exports/{job_id}", response_model=ExportJobOut, summary="查询导出进度")
+def get_issue_export(job_id: str, db: Annotated[Session, Depends(get_db)]) -> ExportJobOut:
+    return export_service.to_job_out(export_service.get_export_job(db, job_id))
+
+
+@router.get("/exports/{job_id}/download", summary="下载导出文件")
+def download_issue_export(job_id: str, db: Annotated[Session, Depends(get_db)]) -> FileResponse:
+    path, display_name = export_service.get_download_file(db, job_id)
+    return FileResponse(path, media_type="text/csv", filename=display_name)
 
 
 @router.get("/{issue_id}", response_model=IssueOut, summary="问题详情与整改轨迹")

@@ -42,3 +42,6 @@ traces/
 db.sqlite3
 *.sqlite3
 .venv
+
+# 本地运行/测试产生的 SQLite 数据与导出文件
+backend/data/

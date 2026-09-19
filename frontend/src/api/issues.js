@@ -1,4 +1,4 @@
-import { http } from './client.js';
+import { API_BASE, http } from './client.js';
 
 const RESOURCE = '/issues';
 
@@ -11,4 +11,9 @@ export const issueApi = {
   transitions: (id) => http.get(`${RESOURCE}/${id}/transitions`),
   changeStatus: (id, payload) => http.post(`${RESOURCE}/${id}/transitions`, payload),
   addRecord: (id, payload) => http.post(`${RESOURCE}/${id}/records`, payload),
+  batchDispatch: (payload) => http.post(`${RESOURCE}/batch-dispatch`, payload),
+  batchClose: (payload) => http.post(`${RESOURCE}/batch-close`, payload),
+  createExport: (payload) => http.post(`${RESOURCE}/exports`, payload),
+  exportJob: (jobId) => http.get(`${RESOURCE}/exports/${jobId}`),
+  exportDownloadUrl: (jobId) => `${API_BASE}${RESOURCE}/exports/${jobId}/download`,
 };

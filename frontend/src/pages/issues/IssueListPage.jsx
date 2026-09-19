@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { issueApi } from '../../api/issues.js';
@@ -13,6 +13,8 @@ import { useAsync } from '../../hooks/useAsync.js';
 import { useDictionaries } from '../../hooks/useDictionaries.js';
 import { useListQuery } from '../../hooks/useListQuery.js';
 import { formatDateTime } from '../../utils/format.js';
+import ExportMenu from './ExportMenu.jsx';
+import { BatchCloseModal, BatchDispatchModal } from './IssueBatchModals.jsx';
 import IssueFormModal from './IssueFormModal.jsx';
 
 const DEFAULT_FILTERS = {
@@ -25,15 +27,39 @@ const DEFAULT_FILTERS = {
   open_only: '',
 };
 
+function PageCheckAll({ checked, indeterminate, onChange }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = indeterminate;
+  }, [indeterminate]);
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      aria-label="全选本页"
+    />
+  );
+}
+
 export default function IssueListPage() {
   const { dictionaries } = useDictionaries();
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showForm, setShowForm] = useState(false);
   const [preset, setPreset] = useState({});
+  const [showDispatch, setShowDispatch] = useState(false);
+  const [showClose, setShowClose] = useState(false);
+  // 跨页勾选：key 为问题 ID，翻页不清空；筛选条件变化时清空，避免带着不可见的选择操作
+  const [selected, setSelected] = useState(() => new Map());
 
   const list = useListQuery((params) => issueApi.list(params), DEFAULT_FILTERS, 10);
   const { data: districts } = useAsync(() => restroomApi.districts(), []);
+
+  useEffect(() => {
+    setSelected(new Map());
+  }, [list.filters]);
 
   // 支持从巡查记录跳转过来直接上报问题
   useEffect(() => {
@@ -46,6 +72,41 @@ export default function IssueListPage() {
     setShowForm(true);
     setSearchParams({}, { replace: true });
   }, [searchParams, setSearchParams]);
+
+  const selectedIds = [...selected.keys()];
+  const pageIds = list.items.map((row) => row.id);
+  const pageCheckedCount = pageIds.filter((id) => selected.has(id)).length;
+  const allPageChecked = pageIds.length > 0 && pageCheckedCount === pageIds.length;
+
+  const toggleRow = (row) => {
+    setSelected((prev) => {
+      const next = new Map(prev);
+      if (next.has(row.id)) next.delete(row.id);
+      else next.set(row.id, row);
+      return next;
+    });
+  };
+
+  const togglePage = () => {
+    setSelected((prev) => {
+      const next = new Map(prev);
+      if (allPageChecked) {
+        pageIds.forEach((id) => next.delete(id));
+      } else {
+        list.items.forEach((row) => next.set(row.id, row));
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelected(new Map());
+
+  const afterBatch = () => {
+    setShowDispatch(false);
+    setShowClose(false);
+    clearSelection();
+    list.reload();
+  };
 
   const remove = async (row) => {
     if (!window.confirm(`确认删除问题「${row.title}」及其整改记录？`)) return;
@@ -155,12 +216,66 @@ export default function IssueListPage() {
         </section>
 
         <section className="card">
+          <div className="selection-bar">
+            <span className={selected.size ? 'selection-count active' : 'selection-count'}>
+              已跨页勾选 <strong>{selected.size}</strong> 项
+            </span>
+            <div className="action-group">
+              <button
+                type="button"
+                className="btn btn-sm btn-primary"
+                disabled={!selected.size}
+                onClick={() => setShowDispatch(true)}
+              >
+                批量派单
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm btn-danger"
+                disabled={!selected.size}
+                onClick={() => setShowClose(true)}
+              >
+                批量关闭
+              </button>
+              <button
+                type="button"
+                className="btn-link"
+                disabled={!selected.size}
+                onClick={clearSelection}
+              >
+                清空选择
+              </button>
+            </div>
+            <ExportMenu
+              filters={list.filters}
+              selectedIds={selectedIds}
+              onError={(message) => toast.error(message)}
+            />
+          </div>
           <DataTable
             loading={list.loading}
             error={list.error}
             rows={list.items}
             emptyText="暂无问题记录"
             columns={[
+              {
+                key: '_select',
+                title: (
+                  <PageCheckAll
+                    checked={allPageChecked}
+                    indeterminate={pageCheckedCount > 0 && !allPageChecked}
+                    onChange={togglePage}
+                  />
+                ),
+                render: (row) => (
+                  <input
+                    type="checkbox"
+                    checked={selected.has(row.id)}
+                    onChange={() => toggleRow(row)}
+                    aria-label={`选择 ${row.code}`}
+                  />
+                ),
+              },
               { key: 'code', title: '编号' },
               {
                 key: 'title',
@@ -224,6 +339,20 @@ export default function IssueListPage() {
 
       {showForm ? (
         <IssueFormModal {...preset} onClose={() => setShowForm(false)} onSaved={list.reload} />
+      ) : null}
+      {showDispatch ? (
+        <BatchDispatchModal
+          issueIds={selectedIds}
+          onClose={() => setShowDispatch(false)}
+          onFinished={afterBatch}
+        />
+      ) : null}
+      {showClose ? (
+        <BatchCloseModal
+          issueIds={selectedIds}
+          onClose={() => setShowClose(false)}
+          onFinished={afterBatch}
+        />
       ) : null}
     </>
   );
