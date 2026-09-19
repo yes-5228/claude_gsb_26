@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     # 分页参数上限
     max_page_size: int = 100
 
+    # 批量导出文件目录（先写临时文件，成功后原子改名）
+    export_dir: str = "./data/exports"
+
     @property
     def cors_origin_list(self) -> list[str]:
         if self.cors_origins.strip() == "*":

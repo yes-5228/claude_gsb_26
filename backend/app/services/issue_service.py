@@ -64,8 +64,8 @@ def is_overdue(issue: Issue) -> bool:
     )
 
 
-def list_issues(
-    db: Session,
+def _apply_issue_filters(
+    stmt,
     *,
     restroom_id: int | None = None,
     inspection_id: int | None = None,
@@ -78,12 +78,8 @@ def list_issues(
     overdue: bool | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
-    page: int = 1,
-    page_size: int = 10,
-    sort_by: str = "report_time",
-    order: str = "desc",
-) -> tuple[list[Issue], int]:
-    stmt = select(Issue)
+):
+    """把列表筛选条件应用到 Issue 查询语句上，列表与批量导出共用。"""
     if district:
         stmt = stmt.join(Restroom, Restroom.id == Issue.restroom_id).where(
             Restroom.district == district
@@ -126,6 +122,42 @@ def list_issues(
                 Issue.reporter.like(like),
             )
         )
+    return stmt
+
+
+def list_issues(
+    db: Session,
+    *,
+    restroom_id: int | None = None,
+    inspection_id: int | None = None,
+    district: str | None = None,
+    status: str | None = None,
+    statuses: list[str] | None = None,
+    category: str | None = None,
+    severity: str | None = None,
+    keyword: str | None = None,
+    overdue: bool | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    page: int = 1,
+    page_size: int = 10,
+    sort_by: str = "report_time",
+    order: str = "desc",
+) -> tuple[list[Issue], int]:
+    stmt = _apply_issue_filters(
+        select(Issue),
+        restroom_id=restroom_id,
+        inspection_id=inspection_id,
+        district=district,
+        status=status,
+        statuses=statuses,
+        category=category,
+        severity=severity,
+        keyword=keyword,
+        overdue=overdue,
+        date_from=date_from,
+        date_to=date_to,
+    )
 
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     column = SORTABLE_FIELDS.get(sort_by, Issue.report_time)

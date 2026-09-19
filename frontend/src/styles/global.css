@@ -850,3 +850,159 @@ table.data-table td.wrap {
     white-space: nowrap;
   }
 }
+
+/* 跨页勾选 + 批量操作浮条 */
+.data-table tr.row-selected td {
+  background: var(--primary-soft, #eef4ff);
+}
+
+.batch-bar {
+  position: sticky;
+  bottom: 16px;
+  margin-top: 12px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: #fff;
+  border: 1px solid #d8dee9;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(20, 40, 80, 0.12);
+}
+
+.batch-bar-collapsed {
+  justify-content: space-between;
+  opacity: 0.9;
+}
+
+.batch-bar-info {
+  font-size: 14px;
+  color: #33405a;
+}
+
+.batch-bar-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.radio-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.radio-row label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+  font-size: 14px;
+  color: #33405a;
+}
+
+/* 批量结果清单 */
+.batch-result-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.batch-result-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.batch-result-title.success {
+  color: #18794e;
+}
+
+.batch-result-title.danger {
+  color: #c0392b;
+}
+
+.batch-id-list,
+.batch-fail-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px 10px;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid #e3e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.batch-id-list.success {
+  background: #f1faf5;
+  columns: 2;
+}
+
+.batch-id-list li {
+  color: #18794e;
+}
+
+.batch-fail-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px dashed #e3e8f0;
+}
+
+.batch-fail-list li:last-child {
+  border-bottom: none;
+}
+
+.batch-fail-id {
+  color: #c0392b;
+  white-space: nowrap;
+}
+
+.batch-fail-reason {
+  color: #55607a;
+  text-align: right;
+}
+
+.batch-no-fail {
+  margin: 0;
+  color: #7b8499;
+  font-size: 13px;
+}
+
+/* 异步导出进度 */
+.export-progress-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: #33405a;
+}
+
+.progress-bar {
+  height: 10px;
+  border-radius: 6px;
+  background: #e9edf5;
+  overflow: hidden;
+}
+
+.progress-bar-inner {
+  height: 100%;
+  background: #2f6fed;
+  border-radius: 6px;
+  transition: width 0.4s ease;
+}
+
+.progress-bar-inner.failed {
+  background: #c0392b;
+}
+
+.export-tip {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: #8a93a6;
+}

@@ -42,3 +42,5 @@ traces/
 db.sqlite3
 *.sqlite3
 .venv
+# SQLite 与批量导出产物
+backend/data/
